@@ -20,47 +20,58 @@
     }
   </script>
     <style>
-    /* Custom Hamburger / X Toggler */
+    /* Custom Hamburger / X toggler */
     .navbar-toggler {
       border: none;
-      background: white;
+      background: transparent;
       padding: 0;
       width: 30px;
-      height: 22px;
+      height: 30px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      justify-content: center;
       position: relative;
       z-index: 1051;
       outline: none !important;
       box-shadow: none !important;
+      cursor: pointer;
     }
 
-    /* Hamburger lines */
-    .hamburger-line {
+    /* Hamburger lines (default visible) */
+    .navbar-toggler .hamburger-line {
       height: 3px;
-      width: 100%;
+      width: 24px;
       background-color: #A61B30;
       border-radius: 2px;
-      transition: all 0.3s ease;
+      margin: 3px 0;
+      transition: opacity 0.2s ease;
     }
 
-    /* Closed: show 3 lines */
-    .navbar-toggler[aria-expanded="false"] .hamburger-line:nth-child(1) { transform: rotate(0) translateY(0); opacity: 1; }
-    .navbar-toggler[aria-expanded="false"] .hamburger-line:nth-child(2) { opacity: 1; }
-    .navbar-toggler[aria-expanded="false"] .hamburger-line:nth-child(3) { transform: rotate(0) translateY(0); opacity: 1; }
+    /* Red X (hidden by default) */
+    .navbar-toggler .toggler-x {
+      display: none;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #A61B30;
+      line-height: 1;
+    }
 
-    /* Open: hide middle line, show X */
-    .navbar-toggler[aria-expanded="true"] .hamburger-line:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
-    .navbar-toggler[aria-expanded="true"] .hamburger-line:nth-child(2) { opacity: 0; }
-    .navbar-toggler[aria-expanded="true"] .hamburger-line:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+    .nav-link.fs-3 {
+      color: #A61B30;
+    }
 
-    /* Offcanvas fullscreen vertically centered links */
+    /* When offcanvas is open, we add .is-open to the button */
+    .navbar-toggler.is-open .hamburger-line { display: none; }
+    .navbar-toggler.is-open .toggler-x { display: block; }
+
+    /* Offcanvas menu */
     .offcanvas-fullscreen .offcanvas-body {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      align-items: center;}
+      align-items: center;
+    }
 
     .btn-close.text-reset {
       color: #A61B30;
@@ -71,35 +82,35 @@
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="navbar navbar-light bg-white position-relative">
-  <div class="container-fluid">
-    <a class="navbar-brand text-dark fw-bold" href="#">LOGO</a>
+  <!-- NAV -->
+  <nav class="navbar navbar-light bg-white position-relative">
+    <div class="container-fluid">
+      <a class="navbar-brand text-dark fw-bold" href="#">LOGO</a>
+      <!-- Toggler -->
+      <button class="navbar-toggler ms-auto" type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#offcanvasNav"
+              aria-controls="offcanvasNav">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="toggler-x">&times;</span>
+      </button>
+    </div>
+  </nav>
 
-    <!-- Custom Hamburger Toggler -->
-    <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNav" aria-expanded="false">
-      <span class="hamburger-line"></span>
-      <span class="hamburger-line"></span>
-      <span class="hamburger-line"></span>
-    </button>
+  <!-- Offcanvas menu fullscreen -->
+  <div class="offcanvas offcanvas-end offcanvas-fullscreen" tabindex="-1" id="offcanvasNav">
+    <div class="offcanvas-header"></div>
+    <div class="offcanvas-body">
+      <ul class="navbar-nav text-center">
+        <li class="nav-item"><a class="nav-link fs-3" href="index.html">Home</a></li>
+        <li class="nav-item"><a class="nav-link fs-3" href="form.html">Form</a></li>
+        <li class="nav-item"><a class="nav-link fs-3" href="timeline.html">Timeline</a></li>
+        <li class="nav-item"><a class="nav-link fs-3" href="tracker.html">Tracker</a></li>
+      </ul>
+    </div>
   </div>
-</nav>
-
-<!-- Offcanvas menu fullscreen -->
-<div class="offcanvas offcanvas-end offcanvas-fullscreen" tabindex="-1" id="offcanvasNav">
-  <div class="offcanvas-header">
-    
-    <!--<button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>-->
-  </div>
-  <div class="offcanvas-body">
-    <ul class="navbar-nav text-center">
-      <li class="nav-item"><a class="nav-link fs-3" href="index.html">Home</a></li>
-      <li class="nav-item"><a class="nav-link fs-3" href="form.html">Form</a></li>
-      <li class="nav-item"><a class="nav-link fs-3" href="timeline.html">Timeline</a></li>
-      <li class="nav-item"><a class="nav-link fs-3" href="tracker.html">Tracker</a></li>
-    </ul>
-  </div>
-</div>
 
 <div class="container my-5 text-start">
   <h2 class="fw-bold">Understanding Jewish Life at Harvard: A Resource Hub</h2>
@@ -132,6 +143,17 @@
   <a href="#" class="text-white mx-2"><i class="bi bi-linkedin"></i></a>
 </footer>
 
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const offcanvas = document.getElementById('offcanvasNav');
+    const toggler = document.querySelector('[data-bs-toggle="offcanvas"][data-bs-target="#offcanvasNav"]');
+
+    if (offcanvas && toggler) {
+      offcanvas.addEventListener('show.bs.offcanvas', () => toggler.classList.add('is-open'));
+      offcanvas.addEventListener('hide.bs.offcanvas', () => toggler.classList.remove('is-open'));
+    }
+  });
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
