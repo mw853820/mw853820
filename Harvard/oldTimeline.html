@@ -1,0 +1,80 @@
+<!--
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timeline</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .timeline { border-left: 3px solid #0d6efd; margin-left: 30px; padding-left: 20px; }
+    .timeline-item { margin-bottom: 30px; position: relative; }
+    .timeline-item::before { content:''; position:absolute; left:-13px; top:5px; width:20px; height:20px; background:#0d6efd; border-radius:50%; }
+    .info-box { display:none; position:absolute; left:30px; top:20px; background:#f8f9fa; padding:10px; border:1px solid #ccc; border-radius:5px; z-index:10; max-width:300px; }
+    .timeline-item:hover .info-box { display:block; }
+    .event-img { max-width:100%; height:auto; margin-top:10px; border-radius:5px; }
+  </style>
+  <script>
+    const SHEET_URL = "YOUR_APPS_SCRIPT_WEBAPP_URL?sheet=Timeline";
+
+    async function loadTimeline() {
+      const res = await fetch(SHEET_URL);
+      const events = await res.json();
+      const container = document.getElementById("timeline");
+      container.innerHTML = "";
+
+      events.forEach(ev => {
+        const div = document.createElement("div");
+        div.className = "timeline-item";
+        div.dataset.month = ev.month;
+        div.dataset.year = ev.year;
+        div.innerHTML = `
+          <h5>${ev.eventName}</h5>
+          <small>${ev.day || ""} ${ev.month}/${ev.year}</small>
+          <div class="info-box">
+            <p>${ev.summary || ""}</p>
+            ${ev.link ? `<a href="${ev.link}" target="_blank">More Info</a><br>` : ""}
+            ${ev.imageUrl ? `<img src="${ev.imageUrl}" class="event-img">` : ""}
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function applyFilters() {
+      const m = document.getElementById("monthFilter").value;
+      const y = document.getElementById("yearFilter").value;
+      document.querySelectorAll(".timeline-item").forEach(item => {
+        const show = (!m || item.dataset.month === m) && (!y || item.dataset.year === y);
+        item.style.display = show ? "block" : "none";
+      });
+    }
+  </script>
+</head>
+<body onload="loadTimeline()">
+<div class="container my-5">
+  <h2>Timeline</h2>
+  <div class="mb-3">
+    <select id="monthFilter" class="form-select w-auto d-inline" onchange="applyFilters()">
+      <option value="">All Months</option>
+      <option value="1">January</option><option value="2">February</option>
+      <option value="3">March</option><option value="4">April</option>
+      <option value="5">May</option><option value="6">June</option>
+      <option value="7">July</option><option value="8">August</option>
+      <option value="9">September</option><option value="10">October</option>
+      <option value="11">November</option><option value="12">December</option>
+    </select>
+    <select id="yearFilter" class="form-select w-auto d-inline" onchange="applyFilters()">
+      <option value="">All Years</option>
+      <option value="2024">2024</option>
+      <option value="2025">2025</option>
+      <option value="2026">2026</option>
+    </select>
+  </div>
+  <div id="timeline" class="timeline"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+-->

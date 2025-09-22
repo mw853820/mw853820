@@ -1,0 +1,367 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4-Column Vertical Timeline with Line + Dots</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+  <style>
+    .timeline-row.active .timeline-preview {
+  display: none !important;
+    }
+
+    /* Timeline column, line, and dots */
+    .timeline-col {
+      position: relative;
+    }
+
+    /* Overlapping timeline line for continuity */
+    .timeline-line {
+      position: absolute;
+      top: -20px;     /* extend into previous row */
+      bottom: -20px;  /* extend into next row */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 3px;
+      background: #A61B30;
+      z-index: 1;
+    }
+
+    .timeline-dot {
+      position: relative;
+      z-index: 2;
+      width: 16px;
+      height: 16px;
+      background: #A61B30;
+      border-radius: 50%;
+      margin: 1rem auto;
+    }
+
+    /* Preview / Card toggle */
+    .timeline-preview { display: block; }
+
+    /* Collapsed (default) */
+    .timeline-card {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transform: scaleY(0);
+      transform-origin: top;
+      transition: transform 0.4s ease, opacity 0.4s ease, max-height 0.4s ease;
+    }
+
+    /* Expanded */
+    .timeline-row.active .timeline-card {
+      max-height: 1000px;   /* big enough for any content */
+      height: auto;         /* let content size naturally */
+      opacity: 1;
+      transform: scaleY(1);
+    }
+
+    /* Animate spacing below expanded card */
+    .timeline-row {
+      margin-bottom: 0;
+      transition: margin-bottom 0.4s ease;
+    }
+    .timeline-row.active {
+      margin-bottom: 2rem;
+    }
+
+    /* Cursor for interactivity */
+    .timeline-event { cursor: pointer; }
+
+    /* Custom Hamburger / X Toggler */
+    .navbar-toggler {
+      border: none;
+      background: white;
+      padding: 0;
+      width: 30px;
+      height: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1051;
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    .hamburger-line {
+      height: 3px;
+      width: 100%;
+      background-color: #A61B30;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .navbar-toggler[aria-expanded="false"] .hamburger-line:nth-child(1) { transform: rotate(0) translateY(0); opacity: 1; }
+    .navbar-toggler[aria-expanded="false"] .hamburger-line:nth-child(2) { opacity: 1; }
+    .navbar-toggler[aria-expanded="false"] .hamburger-line:nth-child(3) { transform: rotate(0) translateY(0); opacity: 1; }
+
+    .navbar-toggler[aria-expanded="true"] .hamburger-line:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+    .navbar-toggler[aria-expanded="true"] .hamburger-line:nth-child(2) { opacity: 0; }
+    .navbar-toggler[aria-expanded="true"] .hamburger-line:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+    /* Offcanvas fullscreen vertically centered links */
+    .offcanvas-fullscreen .offcanvas-body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .btn-close.text-reset { color: #A61B30; justify-self: right; }
+    .list-group-item { border:none; }
+
+    /* Responsive timeline card */
+    .timeline-card {
+      width: 100%;
+      max-width: 565px;
+      border: 4px solid #A61B30 !important;
+      border-radius: 0 !important;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+    }
+
+    .timeline-card .card-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 1.5rem;
+    }
+
+    /* Scrollable text with fade */
+    .timeline-card .card-text-area {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      padding-right: 0.5rem;
+      position: relative;
+    }
+    .timeline-card .card-text-area::after {
+      content: "";
+      position: sticky;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2.5rem;
+      background: linear-gradient(to bottom, rgba(255,255,255,0), #fff);
+      pointer-events: none;
+    }
+
+    /* Custom scrollbar */
+    .timeline-card .card-text-area::-webkit-scrollbar { width: 8px; }
+    .timeline-card .card-text-area::-webkit-scrollbar-thumb {
+      background-color: #A61B30;
+      border-radius: 4px;
+    }
+    .timeline-card .card-text-area::-webkit-scrollbar-track { background: #f1f1f1; }
+
+    /* Responsive image wrapper with fixed ratio (485:204) */
+    .timeline-card .image-wrapper {
+      width: 100%;
+      aspect-ratio: 485 / 204;
+      max-width: 485px;
+      margin: 0 auto;
+      flex-shrink: 0;
+      background: #fff;
+      overflow: hidden;
+    }
+    .timeline-card .image-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 0;
+      display: block;
+    }
+  </style>
+</head>
+<body class="p-4">
+<!-- NAV -->
+<nav class="navbar navbar-light bg-white position-relative">
+  <div class="container-fluid">
+    <a class="navbar-brand text-dark fw-bold" href="#">LOGO</a>
+    <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNav" aria-expanded="false">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Offcanvas menu fullscreen -->
+<div class="offcanvas offcanvas-end offcanvas-fullscreen" tabindex="-1" id="offcanvasNav">
+  <div class="offcanvas-header"></div>
+  <div class="offcanvas-body">
+    <ul class="navbar-nav text-center">
+      <li class="nav-item"><a class="nav-link fs-3" href="index.html">Home</a></li>
+      <li class="nav-item"><a class="nav-link fs-3" href="form.html">Form</a></li>
+      <li class="nav-item"><a class="nav-link fs-3" href="timeline.html">Timeline</a></li>
+      <li class="nav-item"><a class="nav-link fs-3" href="tracker.html">Tracker</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="container my-4">
+  <div class="row">
+    <div class="col-10 offset-2"> 
+      <h2 class="fw-bold">Understanding Jewish Life at Harvard: A Resource Hub</h2>
+      <p>
+        This site provides comprehensive documentation of events, developments, 
+        and institutional responses related to Jewish campus life and antisemitism 
+        at Harvard University from 2022 to present.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="p-2">
+<ul class="list-group list-group-horizontal position-relative overflow-auto w-75 p-4">
+    <li class="list-group-item">Item 1</li>
+    <li class="list-group-item">Item 2</li>
+    <li class="list-group-item">Item 3</li>
+    <li class="list-group-item">Item 4</li>
+    <li class="list-group-item">Item 5</li>
+</ul>
+</div>
+
+<div class="container mb-4">
+  <div class="row">
+    <!-- Timeline on the left -->
+    <div class="col-lg-9 col-md-8">
+      <div id="timeline">
+        <!-- Event Row -->
+        <div class="row timeline-row" data-year="2025" data-month="09" data-type="conference">
+          <div class="col-2 fw-bold">2025</div>
+          <div class="col-2 text-center">
+            <div>September</div>
+            <div class="fw-bold fs-5">17</div>
+          </div>
+          <div class="col-1 timeline-col">
+            <div class="timeline-line"></div>
+            <div class="timeline-dot"></div>
+          </div>
+          <div class="col-7 timeline-event">
+            <div class="timeline-preview">
+              <h2 class="h5 mb-1">Tech Conference</h2>
+              <p class="mb-0">A brief description of the event.</p>
+            </div>
+            <div class="card timeline-card">
+              <div class="card-body">
+                <div class="card-text-area">
+                  <h2 class="h5">Tech Conference</h2>
+                  <p>
+                    A longer paragraph about the event. Details about speakers, 
+                    location, and significance go here. This section will scroll 
+                    if content is longer than the allocated space.
+                  </p>
+                </div>
+                <div class="image-wrapper">
+                  <img src="event image.jpg" alt="Event image">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Another Event -->
+        <div class="row timeline-row" data-year="2024" data-month="02" data-type="project">
+          <div class="col-2 fw-bold">2024</div>
+          <div class="col-2 text-center">
+            <div>February</div>
+            <div class="fw-bold fs-5">12</div>
+          </div>
+          <div class="col-1 timeline-col">
+            <div class="timeline-line"></div>
+            <div class="timeline-dot"></div>
+          </div>
+          <div class="col-7 timeline-event">
+            <div class="timeline-preview">
+              <h2 class="h5 mb-1">Website Launch</h2>
+              <p class="mb-0">The new company site goes live.</p>
+            </div>
+            <div class="card timeline-card">
+              <div class="card-body">
+                <div class="card-text-area">
+                  <h2 class="h5">Website Launch</h2>
+                  <p>
+                    Details about the project, the team involved, and future goals. 
+                    If this text is long, it will also scroll independently.
+                  </p>
+                </div>
+                <div class="image-wrapper">
+                  <img src="https://via.placeholder.com/600x400" alt="Project image">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters on the right -->
+    <div class="col-lg-3 col-md-4">
+      <div class="d-flex flex-column align-items-end gap-3">
+        <select class="form-select w-auto" id="filterYear">
+          <option value="">All Years</option>
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+        </select>
+        <select class="form-select w-auto" id="filterMonth">
+          <option value="">All Months</option>
+          <option value="01">January</option>
+          <option value="02">February</option>
+          <option value="09">September</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="text-center p-4 mt-5" style="background-color: #A61B30;">
+  <a href="#" class="text-white mx-2"><i class="bi bi-facebook"></i></a>
+  <a href="#" class="text-white mx-2"><i class="bi bi-twitter"></i></a>
+  <a href="#" class="text-white mx-2"><i class="bi bi-instagram"></i></a>
+  <a href="#" class="text-white mx-2"><i class="bi bi-linkedin"></i></a>
+</footer>
+
+<script>
+  // Filtering logic
+  const filters = { year: '', month: '', type: '' };
+
+  function applyFilters() {
+    document.querySelectorAll('#timeline .timeline-row').forEach(row => {
+      const match =
+        (!filters.year || row.dataset.year === filters.year) &&
+        (!filters.month || row.dataset.month === filters.month) &&
+        (!filters.type || row.dataset.type === filters.type);
+      row.style.display = match ? '' : 'none';
+    });
+  }
+
+  document.getElementById('filterYear').addEventListener('change', e => {
+    filters.year = e.target.value;
+    applyFilters();
+  });
+  document.getElementById('filterMonth').addEventListener('change', e => {
+    filters.month = e.target.value;
+    applyFilters();
+  });
+
+  // Toggle expand/collapse on click
+  document.querySelectorAll('.timeline-event').forEach(eventCol => {
+    eventCol.addEventListener('click', e => {
+      const row = eventCol.closest('.timeline-row');
+      document.querySelectorAll('.timeline-row.active').forEach(openRow => {
+        if (openRow !== row) openRow.classList.remove('active');
+      });
+      row.classList.toggle('active');
+    });
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
