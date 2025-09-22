@@ -6,17 +6,74 @@
   <title>Add Recommendation</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <script src="assets/js/data-loader.js"></script>
   <script>
     const SHEET_URL = "YOUR_APPS_SCRIPT_WEBAPP_URL";
+    const PLACEHOLDER_URL = "YOUR_APPS_SCRIPT_WEBAPP_URL";
+
+    function shouldSubmitToSheet() {
+      return Boolean(SHEET_URL && SHEET_URL !== PLACEHOLDER_URL);
+    }
+
+    function buildPayload(values) {
+      const payload = new URLSearchParams();
+      payload.append('sheet', 'Recommendations');
+      payload.append('title', values.title);
+      payload.append('date', values.date);
+      payload.append('organization', values.organization);
+      payload.append('type', values.type);
+      payload.append('status', values.status);
+      payload.append('actionDate', values.actionDate);
+      payload.append('description', values.description);
+      return payload;
+    }
+
+    function storeSubmission(values) {
+      DataLoader.saveTrackerSubmission({
+        title: values.title,
+        date: values.date,
+        organization: values.organization,
+        type: values.type,
+        status: values.status,
+        actionDate: values.actionDate,
+        description: values.description
+      });
+    }
+
+    async function submitToSheet(payload) {
+      if (!shouldSubmitToSheet()) {
+        return;
+      }
+      await fetch(SHEET_URL, { method: 'POST', body: payload });
+    }
 
     async function handleSubmit(e) {
       e.preventDefault();
-      let formData = new FormData(document.getElementById("recForm"));
-      formData.append("sheet","Recommendations");
+      const form = document.getElementById('recForm');
 
-      await fetch(SHEET_URL, { method: "POST", body: formData });
-      alert("Recommendation submitted!");
-      document.getElementById("recForm").reset();
+      const values = {
+        title: form.title.value.trim(),
+        date: form.date.value,
+        organization: form.organization.value.trim(),
+        type: form.type.value.trim(),
+        status: form.status.value.trim(),
+        actionDate: form.actionDate.value,
+        description: form.description.value.trim()
+      };
+
+      storeSubmission(values);
+
+      const payload = buildPayload(values);
+
+      try {
+        await submitToSheet(payload);
+        alert('Recommendation submitted! Refresh the tracker to see your update.');
+      } catch (error) {
+        console.error('Sheet submission failed', error);
+        alert('Recommendation saved locally but could not be submitted to the spreadsheet. Please try again later.');
+      } finally {
+        form.reset();
+      }
     }
   </script>
     <style>

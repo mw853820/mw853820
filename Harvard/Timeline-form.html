@@ -6,50 +6,96 @@
   <title>Add Timeline Event</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <script src="assets/js/data-loader.js"></script>
   <script>
     const SHEET_URL = "YOUR_APPS_SCRIPT_WEBAPP_URL";
+    const PLACEHOLDER_URL = "YOUR_APPS_SCRIPT_WEBAPP_URL";
+
+    function shouldSubmitToSheet() {
+      return Boolean(SHEET_URL && SHEET_URL !== PLACEHOLDER_URL);
+    }
+
+    function buildBasePayload(formValues) {
+      const payload = new URLSearchParams();
+      payload.append("sheet", "Timeline");
+      payload.append("eventName", formValues.eventName);
+      payload.append("day", formValues.day);
+      payload.append("month", formValues.month);
+      payload.append("year", formValues.year);
+      payload.append("summary", formValues.summary);
+      payload.append("link", formValues.link);
+      return payload;
+    }
+
+    function storeSubmission(values) {
+      DataLoader.saveTimelineSubmission({
+        title: values.eventName,
+        summary: values.summary,
+        month: values.month,
+        day: values.day,
+        year: values.year,
+        link: values.link,
+        imageData: values.imageData || ''
+      });
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function submitToSheet(payload) {
+      if (!shouldSubmitToSheet()) {
+        return;
+      }
+      await fetch(SHEET_URL, { method: "POST", body: payload });
+    }
 
     async function handleSubmit(e) {
       e.preventDefault();
       const form = document.getElementById("timelineForm");
       const fileInput = document.getElementById("file");
 
-      let fileData = "";
-      let filetype = "";
-      let filename = "";
+      const formValues = {
+        eventName: form.eventName.value.trim(),
+        day: form.day.value.trim(),
+        month: form.month.value.trim(),
+        year: form.year.value.trim(),
+        summary: form.summary.value.trim(),
+        link: form.link.value.trim()
+      };
 
+      let imageDataUrl = '';
       if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        filename = file.name;
-        filetype = file.type;
-        const reader = new FileReader();
-        reader.onloadend = async function() {
-          fileData = btoa(reader.result);
+        try {
+          imageDataUrl = await readFileAsDataURL(fileInput.files[0]);
+        } catch (error) {
+          console.warn('Unable to read uploaded image.', error);
+        }
+      }
 
-          let formData = new URLSearchParams();
-          formData.append("sheet","Timeline");
-          formData.append("eventName", form.eventName.value);
-          formData.append("day", form.day.value);
-          formData.append("month", form.month.value);
-          formData.append("year", form.year.value);
-          formData.append("summary", form.summary.value);
-          formData.append("link", form.link.value);
-          formData.append("file", fileData);
-          formData.append("filename", filename);
-          formData.append("filetype", filetype);
+      formValues.imageData = imageDataUrl;
+      storeSubmission(formValues);
 
-          await fetch(SHEET_URL, { method: "POST", body: formData });
-          alert("Event submitted!");
-          form.reset();
-        };
-        reader.readAsBinaryString(file);
-      } else {
-        // No file, just submit text data
-        let formData = new URLSearchParams(new FormData(form));
-        formData.append("sheet","Timeline");
+      const payload = buildBasePayload(formValues);
+      if (imageDataUrl && fileInput.files.length > 0) {
+        const base64Data = imageDataUrl.split(',')[1] || '';
+        payload.append('file', base64Data);
+        payload.append('filename', fileInput.files[0].name);
+        payload.append('filetype', fileInput.files[0].type);
+      }
 
-        await fetch(SHEET_URL, { method: "POST", body: formData });
-        alert("Event submitted (no image)!");
+      try {
+        await submitToSheet(payload);
+        alert('Event submitted! Refresh the timeline to see your update.');
+      } catch (error) {
+        console.error('Sheet submission failed', error);
+        alert('Event saved locally but could not be submitted to the spreadsheet. Please try again later.');
+      } finally {
         form.reset();
       }
     }
