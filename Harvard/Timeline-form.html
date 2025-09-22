@@ -6,54 +6,7 @@
   <title>Add Timeline Event</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-  <script>
-    const SHEET_URL = "YOUR_APPS_SCRIPT_WEBAPP_URL";
-
-    async function handleSubmit(e) {
-      e.preventDefault();
-      const form = document.getElementById("timelineForm");
-      const fileInput = document.getElementById("file");
-
-      let fileData = "";
-      let filetype = "";
-      let filename = "";
-
-      if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        filename = file.name;
-        filetype = file.type;
-        const reader = new FileReader();
-        reader.onloadend = async function() {
-          fileData = btoa(reader.result);
-
-          let formData = new URLSearchParams();
-          formData.append("sheet","Timeline");
-          formData.append("eventName", form.eventName.value);
-          formData.append("day", form.day.value);
-          formData.append("month", form.month.value);
-          formData.append("year", form.year.value);
-          formData.append("summary", form.summary.value);
-          formData.append("link", form.link.value);
-          formData.append("file", fileData);
-          formData.append("filename", filename);
-          formData.append("filetype", filetype);
-
-          await fetch(SHEET_URL, { method: "POST", body: formData });
-          alert("Event submitted!");
-          form.reset();
-        };
-        reader.readAsBinaryString(file);
-      } else {
-        // No file, just submit text data
-        let formData = new URLSearchParams(new FormData(form));
-        formData.append("sheet","Timeline");
-
-        await fetch(SHEET_URL, { method: "POST", body: formData });
-        alert("Event submitted (no image)!");
-        form.reset();
-      }
-    }
-  </script>
+  <script src="js/data-store.js"></script>
     <style>
     /* Custom Hamburger / X Toggler */
     .navbar-toggler {
@@ -144,7 +97,7 @@
 
 <div class="container my-5">
   <h2>Submit Timeline Event</h2>
-  <form id="timelineForm" onsubmit="handleSubmit(event)">
+  <form id="timelineForm">
     <input class="form-control mb-2" name="eventName" placeholder="Event Name" required>
     <input class="form-control mb-2" type="number" name="day" placeholder="Day">
     <input class="form-control mb-2" type="number" name="month" placeholder="Month (1-12)">
@@ -164,6 +117,64 @@
   <a href="#" class="text-white mx-2"><i class="bi bi-linkedin"></i></a>
 </footer>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!window.HarvardDataStore) {
+      console.error('HarvardDataStore is not available.');
+      return;
+    }
+
+    initTimelineForm();
+  });
+
+  async function initTimelineForm() {
+    await window.HarvardDataStore.ensureTimelineSeeded();
+
+    const form = document.getElementById('timelineForm');
+    const fileInput = document.getElementById('file');
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+
+      const payload = {
+        title: form.eventName.value.trim(),
+        eventName: form.eventName.value.trim(),
+        day: form.day.value,
+        month: form.month.value,
+        year: form.year.value,
+        summary: form.summary.value.trim(),
+        link: form.link.value.trim()
+      };
+
+      if (fileInput && fileInput.files.length > 0) {
+        try {
+          payload.imageUrl = await readFileAsDataUrl(fileInput.files[0]);
+        } catch (error) {
+          console.error('Failed to read file', error);
+          alert('Could not read the selected image. Please try again.');
+          return;
+        }
+      }
+
+      window.HarvardDataStore.addTimelineEvent(payload);
+      form.reset();
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      alert('Event submitted! You can review it on the Timeline page.');
+      window.location.href = 'Timeline.html';
+    });
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

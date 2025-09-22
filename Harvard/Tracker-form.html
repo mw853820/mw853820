@@ -6,19 +6,7 @@
   <title>Add Recommendation</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-  <script>
-    const SHEET_URL = "YOUR_APPS_SCRIPT_WEBAPP_URL";
-
-    async function handleSubmit(e) {
-      e.preventDefault();
-      let formData = new FormData(document.getElementById("recForm"));
-      formData.append("sheet","Recommendations");
-
-      await fetch(SHEET_URL, { method: "POST", body: formData });
-      alert("Recommendation submitted!");
-      document.getElementById("recForm").reset();
-    }
-  </script>
+  <script src="js/data-store.js"></script>
     <style>
     /* Custom Hamburger / X Toggler */
     .navbar-toggler {
@@ -109,7 +97,7 @@
 
 <div class="container my-5">
   <h2>Submit Recommendation</h2>
-  <form id="recForm" onsubmit="handleSubmit(event)">
+  <form id="recForm">
     <input class="form-control mb-2" name="title" placeholder="Recommendation Title" required>
     <input class="form-control mb-2" type="date" name="date" required>
     <input class="form-control mb-2" name="organization" placeholder="Organization">
@@ -132,6 +120,40 @@
   <a href="#" class="text-white mx-2"><i class="bi bi-linkedin"></i></a>
 </footer>
 
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!window.HarvardDataStore) {
+      console.error('HarvardDataStore is not available.');
+      return;
+    }
+
+    initTrackerForm();
+  });
+
+  async function initTrackerForm() {
+    await window.HarvardDataStore.ensureTrackerSeeded();
+
+    const form = document.getElementById('recForm');
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+
+      const payload = {
+        title: form.title.value.trim(),
+        date: form.date.value,
+        organization: form.organization.value.trim(),
+        type: form.type.value.trim(),
+        status: form.status.value,
+        actionDate: form.actionDate.value,
+        description: form.description.value.trim()
+      };
+
+      window.HarvardDataStore.addTrackerEntry(payload);
+      form.reset();
+      alert('Recommendation submitted! You can review it on the Tracker page.');
+      window.location.href = 'Tracker.html';
+    });
+  }
+</script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
