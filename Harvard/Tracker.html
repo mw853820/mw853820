@@ -152,56 +152,167 @@
     <a href="#" class="text-white mx-2"><i class="bi bi-linkedin"></i></a>
   </footer>
 
+  <script src="harvard-data-store.js"></script>
   <script>
-    async function loadData() {
-      // Fake test data (replace with fetch)
-      const data = [
-        { date: "April 1, 2023", title: "Recommendation 1", status: "Resolved", organization: "Org A", type: "Type A", description: "Fixed issue", timestamp: "2023-04-01" },
-        { date: "April 2, 2023", title: "Recommendation 2", status: "In Progress", organization: "Org B", type: "Type B", description: "Still working", timestamp: "2023-04-02" },
-        { date: "April 3, 2023", title: "Recommendation 3", status: "Not Taken", organization: "Org C", type: "Type C", description: "Not acted upon", timestamp: "2023-04-03" }
-      ];
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!window.HarvardDataStore) {
+        console.error('HarvardDataStore is not available.');
+        return;
+      }
 
-      const container = document.querySelector("#accordionData tbody");
-      container.innerHTML = "";
+      await window.HarvardDataStore.ensureRecommendationsSeeded();
+      const recommendations = window.HarvardDataStore.getRecommendations();
+      renderRecommendations(recommendations);
+      initOffcanvasToggler();
+    });
 
-      data.forEach((row, i) => {
-        let statusClass = "";
-        if (row.status === "Resolved") statusClass = "status-resolved";
-        else if (row.status === "In Progress") statusClass = "status-progress";
-        else if (row.status === "Not Taken") statusClass = "status-not-taken";
+    function renderRecommendations(recommendations) {
+      const container = document.querySelector('#accordionData tbody');
+      if (!container) {
+        return;
+      }
 
-        container.innerHTML += `
-          <tr class="accordion-toggle collapsed ${statusClass}"
-              role="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#collapse${i}"
-              aria-expanded="false"
-              aria-controls="collapse${i}">
-            <td>${row.date}</td>
-            <td>${row.title}</td>
-            <td>${row.status}</td>
-            <td class="expand-button">
-              <span class="toggle-icon"><i class="bi bi-chevron-down"></i></span>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="4">
-              <div id="collapse${i}" class="collapse accordion-body p-3" data-bs-parent="#accordionData">
-                <div class="row"><div class="col-2">Organization</div><div class="col-6">${row.organization}</div></div>
-                <div class="row"><div class="col-2">Type</div><div class="col-6">${row.type}</div></div>
-                <div class="row"><div class="col-2">Description</div><div class="col-6">${row.description}</div></div>
-                <small><em>Submitted: ${row.timestamp}</em></small>
-              </div>
-            </td>
-          </tr>`;
+      container.innerHTML = '';
+
+      if (!recommendations.length) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 4;
+        cell.className = 'text-center text-muted py-4';
+        cell.textContent = 'No recommendations submitted yet.';
+        row.appendChild(cell);
+        container.appendChild(row);
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      recommendations.forEach((recommendation, index) => {
+        const rows = createRecommendationRows(recommendation, index);
+        fragment.appendChild(rows.header);
+        fragment.appendChild(rows.details);
+      });
+
+      container.appendChild(fragment);
+    }
+
+    function createRecommendationRows(recommendation, index) {
+      const collapseId = `collapse${index}`;
+      const headerRow = document.createElement('tr');
+      const statusClass = getStatusClass(recommendation.status);
+      headerRow.className = ['accordion-toggle', 'collapsed', statusClass].filter(Boolean).join(' ');
+      headerRow.setAttribute('role', 'button');
+      headerRow.setAttribute('data-bs-toggle', 'collapse');
+      headerRow.setAttribute('data-bs-target', `#${collapseId}`);
+      headerRow.setAttribute('aria-expanded', 'false');
+      headerRow.setAttribute('aria-controls', collapseId);
+
+      const dateCell = document.createElement('td');
+      dateCell.textContent = formatDateForDisplay(recommendation.date);
+      headerRow.appendChild(dateCell);
+
+      const titleCell = document.createElement('td');
+      titleCell.textContent = recommendation.title || 'Untitled Recommendation';
+      headerRow.appendChild(titleCell);
+
+      const statusCell = document.createElement('td');
+      statusCell.textContent = recommendation.status || '—';
+      headerRow.appendChild(statusCell);
+
+      const expandCell = document.createElement('td');
+      expandCell.className = 'expand-button';
+      const iconWrapper = document.createElement('span');
+      iconWrapper.className = 'toggle-icon';
+      const icon = document.createElement('i');
+      icon.className = 'bi bi-chevron-down';
+      iconWrapper.appendChild(icon);
+      expandCell.appendChild(iconWrapper);
+      headerRow.appendChild(expandCell);
+
+      const detailsRow = document.createElement('tr');
+      const detailCell = document.createElement('td');
+      detailCell.colSpan = 4;
+      const collapse = document.createElement('div');
+      collapse.id = collapseId;
+      collapse.className = 'collapse accordion-body p-3';
+      collapse.setAttribute('data-bs-parent', '#accordionData');
+
+      collapse.appendChild(createDetailRow('Organization', recommendation.organization || '—'));
+      collapse.appendChild(createDetailRow('Type', recommendation.type || '—'));
+      collapse.appendChild(createDetailRow('Description', recommendation.description || '—'));
+
+      if (recommendation.actionDate) {
+        collapse.appendChild(createDetailRow('Action Date', formatDateForDisplay(recommendation.actionDate)));
+      }
+
+      if (recommendation.createdAt) {
+        const submitted = document.createElement('small');
+        submitted.className = 'd-block mt-3 text-muted';
+        submitted.textContent = `Submitted: ${formatDateTime(recommendation.createdAt)}`;
+        collapse.appendChild(submitted);
+      }
+
+      detailCell.appendChild(collapse);
+      detailsRow.appendChild(detailCell);
+
+      return { header: headerRow, details: detailsRow };
+    }
+
+    function createDetailRow(label, value) {
+      const row = document.createElement('div');
+      row.className = 'row mb-2';
+      const labelCol = document.createElement('div');
+      labelCol.className = 'col-3 col-md-2 fw-semibold';
+      labelCol.textContent = label;
+      const valueCol = document.createElement('div');
+      valueCol.className = 'col';
+      valueCol.textContent = value;
+      row.append(labelCol, valueCol);
+      return row;
+    }
+
+    function formatDateForDisplay(value) {
+      if (!value) {
+        return '';
+      }
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function formatDateTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return '';
+      }
+
+      return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
       });
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      // Load table
-      loadData();
+    function getStatusClass(status) {
+      const normalized = (status || '').toLowerCase();
+      if (normalized === 'closed' || normalized === 'resolved') {
+        return 'status-resolved';
+      }
+      if (normalized === 'in progress') {
+        return 'status-progress';
+      }
+      if (normalized === 'open' || normalized === 'not taken') {
+        return 'status-not-taken';
+      }
+      return '';
+    }
 
-      // Hook the offcanvas events to flip the toggler icon
+    function initOffcanvasToggler() {
       const offcanvas = document.getElementById('offcanvasNav');
       const toggler = document.querySelector('[data-bs-toggle="offcanvas"][data-bs-target="#offcanvasNav"]');
 
@@ -209,7 +320,7 @@
         offcanvas.addEventListener('show.bs.offcanvas', () => toggler.classList.add('is-open'));
         offcanvas.addEventListener('hide.bs.offcanvas', () => toggler.classList.remove('is-open'));
       }
-    });
+    }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

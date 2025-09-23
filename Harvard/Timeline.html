@@ -236,13 +236,9 @@
 </div>
 
 <div class="p-2">
-<ul class="list-group list-group-horizontal position-relative overflow-auto w-75 p-4">
-    <li class="list-group-item">Item 1</li>
-    <li class="list-group-item">Item 2</li>
-    <li class="list-group-item">Item 3</li>
-    <li class="list-group-item">Item 4</li>
-    <li class="list-group-item">Item 5</li>
-</ul>
+  <ul id="timelineHighlights" class="list-group list-group-horizontal position-relative overflow-auto w-75 p-4">
+    <!-- Populated dynamically -->
+  </ul>
 </div>
 
 <div class="container mb-4">
@@ -250,72 +246,7 @@
     <!-- Timeline on the left -->
     <div class="col-lg-9 col-md-8">
       <div id="timeline">
-        <!-- Event Row -->
-        <div class="row timeline-row" data-year="2025" data-month="09" data-type="conference">
-          <div class="col-2 fw-bold">2025</div>
-          <div class="col-2 text-center">
-            <div>September</div>
-            <div class="fw-bold fs-5">17</div>
-          </div>
-          <div class="col-1 timeline-col">
-            <div class="timeline-line"></div>
-            <div class="timeline-dot"></div>
-          </div>
-          <div class="col-7 timeline-event">
-            <div class="timeline-preview">
-              <h2 class="h5 mb-1">Tech Conference</h2>
-              <p class="mb-0">A brief description of the event.</p>
-            </div>
-            <div class="card timeline-card">
-              <div class="card-body">
-                <div class="card-text-area">
-                  <h2 class="h5">Tech Conference</h2>
-                  <p>
-                    A longer paragraph about the event. Details about speakers, 
-                    location, and significance go here. This section will scroll 
-                    if content is longer than the allocated space.
-                  </p>
-                </div>
-                <div class="image-wrapper">
-                  <img src="event image.jpg" alt="Event image">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Another Event -->
-        <div class="row timeline-row" data-year="2024" data-month="02" data-type="project">
-          <div class="col-2 fw-bold">2024</div>
-          <div class="col-2 text-center">
-            <div>February</div>
-            <div class="fw-bold fs-5">12</div>
-          </div>
-          <div class="col-1 timeline-col">
-            <div class="timeline-line"></div>
-            <div class="timeline-dot"></div>
-          </div>
-          <div class="col-7 timeline-event">
-            <div class="timeline-preview">
-              <h2 class="h5 mb-1">Website Launch</h2>
-              <p class="mb-0">The new company site goes live.</p>
-            </div>
-            <div class="card timeline-card">
-              <div class="card-body">
-                <div class="card-text-area">
-                  <h2 class="h5">Website Launch</h2>
-                  <p>
-                    Details about the project, the team involved, and future goals. 
-                    If this text is long, it will also scroll independently.
-                  </p>
-                </div>
-                <div class="image-wrapper">
-                  <img src="https://via.placeholder.com/600x400" alt="Project image">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- Populated dynamically -->
       </div>
     </div>
 
@@ -324,14 +255,9 @@
       <div class="d-flex flex-column align-items-end gap-3">
         <select class="form-select w-auto" id="filterYear">
           <option value="">All Years</option>
-          <option value="2024">2024</option>
-          <option value="2025">2025</option>
         </select>
         <select class="form-select w-auto" id="filterMonth">
           <option value="">All Months</option>
-          <option value="01">January</option>
-          <option value="02">February</option>
-          <option value="09">September</option>
         </select>
       </div>
     </div>
@@ -346,9 +272,311 @@
   <a href="#" class="text-white mx-2"><i class="bi bi-linkedin"></i></a>
 </footer>
 
+<script src="harvard-data-store.js"></script>
 <script>
-  // Filtering logic
   const filters = { year: '', month: '', type: '' };
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!window.HarvardDataStore) {
+      console.error('HarvardDataStore is not available.');
+      return;
+    }
+
+    await window.HarvardDataStore.ensureTimelineSeeded();
+    const events = window.HarvardDataStore.getTimelineEvents();
+    populateFilters(events);
+    renderTimeline(events);
+    setupFilterHandlers();
+    initOffcanvasToggler();
+  });
+
+  function renderTimeline(events) {
+    const timelineContainer = document.getElementById('timeline');
+    if (!timelineContainer) {
+      return;
+    }
+
+    timelineContainer.innerHTML = '';
+
+    if (!events.length) {
+      const emptyMessage = document.createElement('p');
+      emptyMessage.className = 'text-muted';
+      emptyMessage.textContent = 'No events have been added yet.';
+      timelineContainer.appendChild(emptyMessage);
+      updateHighlights([]);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    events.forEach((event, index) => {
+      fragment.appendChild(createTimelineRow(event, index));
+    });
+
+    timelineContainer.appendChild(fragment);
+    updateHighlights(events);
+    attachTimelineEventListeners();
+    applyFilters();
+  }
+
+  function createTimelineRow(event, index) {
+    const row = document.createElement('div');
+    row.className = 'row timeline-row';
+    row.dataset.year = event.year || '';
+    row.dataset.month = event.month || '';
+    row.dataset.type = event.type || '';
+
+    const yearCol = document.createElement('div');
+    yearCol.className = 'col-2 fw-bold';
+    yearCol.textContent = event.year || '';
+    row.appendChild(yearCol);
+
+    const dateCol = document.createElement('div');
+    dateCol.className = 'col-2 text-center';
+    const monthLabel = document.createElement('div');
+    monthLabel.textContent = formatMonthName(event.month);
+    const dayLabel = document.createElement('div');
+    dayLabel.className = 'fw-bold fs-5';
+    dayLabel.textContent = formatDay(event.day);
+    dateCol.append(monthLabel, dayLabel);
+    row.appendChild(dateCol);
+
+    const timelineCol = document.createElement('div');
+    timelineCol.className = 'col-1 timeline-col';
+    const line = document.createElement('div');
+    line.className = 'timeline-line';
+    const dot = document.createElement('div');
+    dot.className = 'timeline-dot';
+    timelineCol.append(line, dot);
+    row.appendChild(timelineCol);
+
+    const eventCol = document.createElement('div');
+    eventCol.className = 'col-7 timeline-event';
+
+    const preview = document.createElement('div');
+    preview.className = 'timeline-preview';
+    const previewTitle = document.createElement('h2');
+    previewTitle.className = 'h5 mb-1';
+    previewTitle.textContent = event.title || event.eventName || 'Untitled Event';
+    const previewSummary = document.createElement('p');
+    previewSummary.className = 'mb-0';
+    previewSummary.textContent = createPreviewText(event.summary);
+    preview.append(previewTitle, previewSummary);
+
+    const card = document.createElement('div');
+    card.className = 'card timeline-card';
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body';
+
+    const textArea = document.createElement('div');
+    textArea.className = 'card-text-area';
+    const cardTitle = document.createElement('h2');
+    cardTitle.className = 'h5';
+    cardTitle.textContent = event.title || event.eventName || 'Untitled Event';
+    textArea.appendChild(cardTitle);
+
+    if (event.summary) {
+      const summaryParagraph = document.createElement('p');
+      summaryParagraph.textContent = event.summary;
+      textArea.appendChild(summaryParagraph);
+    }
+
+    const safeLink = sanitizeUrl(event.link);
+    if (safeLink) {
+      const linkParagraph = document.createElement('p');
+      const link = document.createElement('a');
+      link.href = safeLink;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Read more';
+      linkParagraph.appendChild(link);
+      textArea.appendChild(linkParagraph);
+    }
+
+    cardBody.appendChild(textArea);
+
+    if (event.imageUrl) {
+      const imageWrapper = document.createElement('div');
+      imageWrapper.className = 'image-wrapper';
+      const image = document.createElement('img');
+      image.src = event.imageUrl;
+      image.alt = event.title || event.eventName || 'Timeline event image';
+      imageWrapper.appendChild(image);
+      cardBody.appendChild(imageWrapper);
+    }
+
+    if (event.createdAt) {
+      const submitted = document.createElement('small');
+      submitted.className = 'text-muted d-block mt-2';
+      submitted.textContent = `Submitted: ${formatDateTime(event.createdAt)}`;
+      cardBody.appendChild(submitted);
+    }
+
+    card.appendChild(cardBody);
+    eventCol.append(preview, card);
+    row.appendChild(eventCol);
+
+    return row;
+  }
+
+  function createPreviewText(summary = '') {
+    const text = summary.trim();
+    if (!text) {
+      return 'Tap to view details.';
+    }
+    return text.length > 120 ? `${text.slice(0, 117)}…` : text;
+  }
+
+  function formatMonthName(month) {
+    const monthIndex = Number.parseInt(month, 10);
+    if (!Number.isFinite(monthIndex) || monthIndex < 1 || monthIndex > 12) {
+      return '';
+    }
+    return monthNames[monthIndex - 1];
+  }
+
+  function formatDay(day) {
+    const numericDay = Number.parseInt(day, 10);
+    if (!Number.isFinite(numericDay) || numericDay < 1) {
+      return '';
+    }
+    return String(numericDay).padStart(2, '0');
+  }
+
+  function sanitizeUrl(url) {
+    const trimmed = (url || '').trim();
+    if (!trimmed) {
+      return '';
+    }
+
+    try {
+      const parsed = new URL(trimmed, window.location.origin);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return parsed.href;
+      }
+    } catch (error) {
+      return '';
+    }
+
+    return '';
+  }
+
+  function formatDateTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  function attachTimelineEventListeners() {
+    document.querySelectorAll('.timeline-event').forEach(eventCol => {
+      eventCol.addEventListener('click', () => {
+        const row = eventCol.closest('.timeline-row');
+        document.querySelectorAll('.timeline-row.active').forEach(openRow => {
+          if (openRow !== row) {
+            openRow.classList.remove('active');
+          }
+        });
+        row.classList.toggle('active');
+      });
+    });
+  }
+
+  function updateHighlights(events) {
+    const list = document.getElementById('timelineHighlights');
+    if (!list) {
+      return;
+    }
+
+    list.innerHTML = '';
+
+    if (!events.length) {
+      const emptyItem = document.createElement('li');
+      emptyItem.className = 'list-group-item text-muted';
+      emptyItem.textContent = 'No events to highlight yet.';
+      list.appendChild(emptyItem);
+      return;
+    }
+
+    events.slice(0, 5).forEach(event => {
+      const item = document.createElement('li');
+      item.className = 'list-group-item';
+      item.textContent = event.title || event.eventName || 'Untitled Event';
+      list.appendChild(item);
+    });
+  }
+
+  function populateFilters(events) {
+    const yearSelect = document.getElementById('filterYear');
+    const monthSelect = document.getElementById('filterMonth');
+
+    if (yearSelect) {
+      const currentValue = yearSelect.value || filters.year;
+      yearSelect.innerHTML = '<option value="">All Years</option>';
+      const years = Array.from(new Set(events.map(event => event.year).filter(Boolean)))
+        .sort((a, b) => Number.parseInt(b, 10) - Number.parseInt(a, 10));
+
+      years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        yearSelect.appendChild(option);
+      });
+
+      if (currentValue && years.includes(currentValue)) {
+        yearSelect.value = currentValue;
+        filters.year = currentValue;
+      }
+    }
+
+    if (monthSelect) {
+      const currentValue = monthSelect.value || filters.month;
+      monthSelect.innerHTML = '<option value="">All Months</option>';
+      const months = Array.from(new Set(events.map(event => event.month).filter(Boolean)))
+        .sort((a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10));
+
+      months.forEach(month => {
+        const option = document.createElement('option');
+        option.value = month;
+        option.textContent = formatMonthName(month);
+        monthSelect.appendChild(option);
+      });
+
+      if (currentValue && months.includes(currentValue)) {
+        monthSelect.value = currentValue;
+        filters.month = currentValue;
+      }
+    }
+  }
+
+  function setupFilterHandlers() {
+    const yearSelect = document.getElementById('filterYear');
+    const monthSelect = document.getElementById('filterMonth');
+
+    if (yearSelect) {
+      yearSelect.addEventListener('change', event => {
+        filters.year = event.target.value;
+        applyFilters();
+      });
+    }
+
+    if (monthSelect) {
+      monthSelect.addEventListener('change', event => {
+        filters.month = event.target.value;
+        applyFilters();
+      });
+    }
+  }
 
   function applyFilters() {
     document.querySelectorAll('#timeline .timeline-row').forEach(row => {
@@ -360,28 +588,7 @@
     });
   }
 
-  document.getElementById('filterYear').addEventListener('change', e => {
-    filters.year = e.target.value;
-    applyFilters();
-  });
-  document.getElementById('filterMonth').addEventListener('change', e => {
-    filters.month = e.target.value;
-    applyFilters();
-  });
-
-  // Toggle expand/collapse on click
-  document.querySelectorAll('.timeline-event').forEach(eventCol => {
-    eventCol.addEventListener('click', e => {
-      const row = eventCol.closest('.timeline-row');
-      document.querySelectorAll('.timeline-row.active').forEach(openRow => {
-        if (openRow !== row) openRow.classList.remove('active');
-      });
-      row.classList.toggle('active');
-    });
-  });
-</script>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
+  function initOffcanvasToggler() {
     const offcanvas = document.getElementById('offcanvasNav');
     const toggler = document.querySelector('[data-bs-toggle="offcanvas"][data-bs-target="#offcanvasNav"]');
 
@@ -389,7 +596,7 @@
       offcanvas.addEventListener('show.bs.offcanvas', () => toggler.classList.add('is-open'));
       offcanvas.addEventListener('hide.bs.offcanvas', () => toggler.classList.remove('is-open'));
     }
-  });
+  }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
