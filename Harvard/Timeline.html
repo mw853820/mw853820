@@ -236,87 +236,18 @@
 </div>
 
 <div class="p-2">
-<ul class="list-group list-group-horizontal position-relative overflow-auto w-75 p-4">
-    <li class="list-group-item">Item 1</li>
-    <li class="list-group-item">Item 2</li>
-    <li class="list-group-item">Item 3</li>
-    <li class="list-group-item">Item 4</li>
-    <li class="list-group-item">Item 5</li>
-</ul>
+  <ul id="typeFilters" class="list-group list-group-horizontal position-relative overflow-auto w-75 p-4 gap-2"></ul>
 </div>
 
 <div class="container mb-4">
   <div class="row">
     <!-- Timeline on the left -->
     <div class="col-lg-9 col-md-8">
-      <div id="timeline">
-        <!-- Event Row -->
-        <div class="row timeline-row" data-year="2025" data-month="09" data-type="conference">
-          <div class="col-2 fw-bold">2025</div>
-          <div class="col-2 text-center">
-            <div>September</div>
-            <div class="fw-bold fs-5">17</div>
-          </div>
-          <div class="col-1 timeline-col">
-            <div class="timeline-line"></div>
-            <div class="timeline-dot"></div>
-          </div>
-          <div class="col-7 timeline-event">
-            <div class="timeline-preview">
-              <h2 class="h5 mb-1">Tech Conference</h2>
-              <p class="mb-0">A brief description of the event.</p>
-            </div>
-            <div class="card timeline-card">
-              <div class="card-body">
-                <div class="card-text-area">
-                  <h2 class="h5">Tech Conference</h2>
-                  <p>
-                    A longer paragraph about the event. Details about speakers, 
-                    location, and significance go here. This section will scroll 
-                    if content is longer than the allocated space.
-                  </p>
-                </div>
-                <div class="image-wrapper">
-                  <img src="event image.jpg" alt="Event image">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Another Event -->
-        <div class="row timeline-row" data-year="2024" data-month="02" data-type="project">
-          <div class="col-2 fw-bold">2024</div>
-          <div class="col-2 text-center">
-            <div>February</div>
-            <div class="fw-bold fs-5">12</div>
-          </div>
-          <div class="col-1 timeline-col">
-            <div class="timeline-line"></div>
-            <div class="timeline-dot"></div>
-          </div>
-          <div class="col-7 timeline-event">
-            <div class="timeline-preview">
-              <h2 class="h5 mb-1">Website Launch</h2>
-              <p class="mb-0">The new company site goes live.</p>
-            </div>
-            <div class="card timeline-card">
-              <div class="card-body">
-                <div class="card-text-area">
-                  <h2 class="h5">Website Launch</h2>
-                  <p>
-                    Details about the project, the team involved, and future goals. 
-                    If this text is long, it will also scroll independently.
-                  </p>
-                </div>
-                <div class="image-wrapper">
-                  <img src="https://via.placeholder.com/600x400" alt="Project image">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div id="timeline"></div>
+      <div id="timelineEmpty" class="text-muted text-center py-4 d-none">
+        No events match the selected filters.
       </div>
+      <div id="timelineError" class="alert alert-danger d-none" role="alert"></div>
     </div>
 
     <!-- Filters on the right -->
@@ -324,14 +255,9 @@
       <div class="d-flex flex-column align-items-end gap-3">
         <select class="form-select w-auto" id="filterYear">
           <option value="">All Years</option>
-          <option value="2024">2024</option>
-          <option value="2025">2025</option>
         </select>
         <select class="form-select w-auto" id="filterMonth">
           <option value="">All Months</option>
-          <option value="01">January</option>
-          <option value="02">February</option>
-          <option value="09">September</option>
         </select>
       </div>
     </div>
@@ -346,50 +272,326 @@
   <a href="#" class="text-white mx-2"><i class="bi bi-linkedin"></i></a>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="js/data-utils.js"></script>
 <script>
-  // Filtering logic
-  const filters = { year: '', month: '', type: '' };
+  (function () {
+    const filters = { year: '', month: '', type: '' };
+    let events = [];
 
-  function applyFilters() {
-    document.querySelectorAll('#timeline .timeline-row').forEach(row => {
-      const match =
-        (!filters.year || row.dataset.year === filters.year) &&
-        (!filters.month || row.dataset.month === filters.month) &&
-        (!filters.type || row.dataset.type === filters.type);
-      row.style.display = match ? '' : 'none';
+    const timelineEl = document.getElementById('timeline');
+    const emptyStateEl = document.getElementById('timelineEmpty');
+    const errorEl = document.getElementById('timelineError');
+    const typeFilterList = document.getElementById('typeFilters');
+    const yearSelect = document.getElementById('filterYear');
+    const monthSelect = document.getElementById('filterMonth');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupOffcanvas();
+      setupTypeFilterInteractions();
+      setupSelectFilters();
+      loadTimeline();
     });
-  }
 
-  document.getElementById('filterYear').addEventListener('change', e => {
-    filters.year = e.target.value;
-    applyFilters();
-  });
-  document.getElementById('filterMonth').addEventListener('change', e => {
-    filters.month = e.target.value;
-    applyFilters();
-  });
-
-  // Toggle expand/collapse on click
-  document.querySelectorAll('.timeline-event').forEach(eventCol => {
-    eventCol.addEventListener('click', e => {
-      const row = eventCol.closest('.timeline-row');
-      document.querySelectorAll('.timeline-row.active').forEach(openRow => {
-        if (openRow !== row) openRow.classList.remove('active');
-      });
-      row.classList.toggle('active');
-    });
-  });
-</script>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const offcanvas = document.getElementById('offcanvasNav');
-    const toggler = document.querySelector('[data-bs-toggle="offcanvas"][data-bs-target="#offcanvasNav"]');
-
-    if (offcanvas && toggler) {
-      offcanvas.addEventListener('show.bs.offcanvas', () => toggler.classList.add('is-open'));
-      offcanvas.addEventListener('hide.bs.offcanvas', () => toggler.classList.remove('is-open'));
+    function loadTimeline() {
+      showLoadingMessage();
+      HarvardData.loadEvents()
+        .then((data) => {
+          events = HarvardData.sortEvents(data, 'desc');
+          renderFilters(events);
+          renderTimeline(events);
+          applyFilters();
+        })
+        .catch((error) => {
+          console.error(error);
+          showErrorMessage('Unable to load timeline data right now. Please try again later.');
+        });
     }
-  });
+
+    function showLoadingMessage() {
+      timelineEl.innerHTML = '<p class="text-muted">Loading timeline…</p>';
+      emptyStateEl.classList.add('d-none');
+      errorEl.classList.add('d-none');
+      errorEl.textContent = '';
+    }
+
+    function renderFilters(data) {
+      renderYearOptions(data);
+      renderMonthOptions(data);
+      renderTypeFilters(data);
+    }
+
+    function renderYearOptions(data) {
+      const uniqueYears = Array.from(new Set(data.map((event) => event.year).filter(Boolean))).sort((a, b) => b.localeCompare(a));
+      const previousSelection = filters.year;
+      yearSelect.innerHTML = '<option value="">All Years</option>' + uniqueYears.map((year) => `<option value="${year}">${year}</option>`).join('');
+      if (previousSelection && uniqueYears.includes(previousSelection)) {
+        yearSelect.value = previousSelection;
+      } else {
+        filters.year = '';
+        yearSelect.value = '';
+      }
+      updateMonthOptionsForYear(filters.year);
+    }
+
+    function renderMonthOptions(data) {
+      const monthMap = new Map();
+      data.forEach((event) => {
+        if (event.monthNumber && event.monthName && !monthMap.has(event.monthNumber)) {
+          monthMap.set(event.monthNumber, event.monthName);
+        }
+      });
+      populateMonthSelect(monthMap);
+    }
+
+    function updateMonthOptionsForYear(selectedYear) {
+      const monthMap = new Map();
+      events.forEach((event) => {
+        if (selectedYear && event.year !== selectedYear) {
+          return;
+        }
+        if (event.monthNumber && event.monthName && !monthMap.has(event.monthNumber)) {
+          monthMap.set(event.monthNumber, event.monthName);
+        }
+      });
+      const previousMonth = filters.month;
+      populateMonthSelect(monthMap);
+      if (previousMonth && monthMap.has(previousMonth)) {
+        monthSelect.value = previousMonth;
+      } else {
+        filters.month = '';
+        monthSelect.value = '';
+      }
+    }
+
+    function populateMonthSelect(monthMap) {
+      const sortedMonths = Array.from(monthMap.entries()).sort((a, b) => Number(a[0]) - Number(b[0]));
+      monthSelect.innerHTML = '<option value="">All Months</option>' + sortedMonths.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+    }
+
+    function renderTypeFilters(data) {
+      const typeMap = new Map();
+      data.forEach((event) => {
+        if (!typeMap.has(event.typeSlug)) {
+          typeMap.set(event.typeSlug, event.type);
+        }
+      });
+      if (filters.type && !typeMap.has(filters.type)) {
+        filters.type = '';
+      }
+      typeFilterList.innerHTML = '';
+      typeFilterList.appendChild(createTypeFilterItem('All categories', '', filters.type === ''));
+      Array.from(typeMap.entries())
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .forEach(([slug, label]) => {
+          typeFilterList.appendChild(createTypeFilterItem(label, slug, filters.type === slug));
+        });
+    }
+
+    function createTypeFilterItem(label, value, isActive) {
+      const item = document.createElement('li');
+      item.className = 'list-group-item list-group-item-action text-nowrap';
+      item.dataset.type = value;
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      if (isActive) {
+        item.classList.add('active');
+      }
+      item.textContent = label;
+      return item;
+    }
+
+    function renderTimeline(data) {
+      timelineEl.innerHTML = '';
+      const fragment = document.createDocumentFragment();
+      data.forEach((event) => {
+        fragment.appendChild(createTimelineRow(event));
+      });
+      timelineEl.appendChild(fragment);
+      setupTimelineInteractions();
+    }
+
+    function createTimelineRow(event) {
+      const row = document.createElement('div');
+      row.className = 'row timeline-row';
+      row.dataset.year = event.year || '';
+      row.dataset.month = event.monthNumber || '';
+      row.dataset.type = event.typeSlug || '';
+
+      const monthLabel = event.monthName || '';
+      const dayLabel = event.day || '';
+      const yearLabel = event.year || '';
+      const title = escapeHtml(event.title);
+      const preview = truncateText(event.description, 120);
+
+      row.innerHTML = `
+        <div class="col-2 fw-bold">${escapeHtml(yearLabel)}</div>
+        <div class="col-2 text-center">
+          <div>${escapeHtml(monthLabel)}</div>
+          <div class="fw-bold fs-5">${escapeHtml(dayLabel)}</div>
+        </div>
+        <div class="col-1 timeline-col">
+          <div class="timeline-line"></div>
+          <div class="timeline-dot"></div>
+        </div>
+        <div class="col-7 timeline-event" role="button" tabindex="0">
+          <div class="timeline-preview">
+            <h2 class="h5 mb-1">${title}</h2>
+            <p class="mb-0">${escapeHtml(preview)}</p>
+          </div>
+          <div class="card timeline-card">
+            <div class="card-body">
+              <div class="card-text-area">
+                <h2 class="h5">${title}</h2>
+                <p>${escapeHtml(event.description)}</p>
+                ${buildMetadataMarkup(event)}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      return row;
+    }
+
+    function buildMetadataMarkup(event) {
+      const details = [];
+      if (event.type) {
+        details.push(`<p class="mb-2"><strong>Category:</strong> ${escapeHtml(event.type)}</p>`);
+      }
+      if (event.displayDate) {
+        details.push(`<p class="mb-2"><strong>Date:</strong> ${escapeHtml(event.displayDate)}</p>`);
+      }
+      if (event.source) {
+        details.push(`<p class="mb-0"><strong>Source:</strong> ${formatSource(event)}</p>`);
+      }
+      return details.join('');
+    }
+
+    function formatSource(event) {
+      if (event.sourceLink) {
+        return `<a href="${event.sourceLink}" target="_blank" rel="noopener">${escapeHtml(getSourceLabel(event.source))}</a>`;
+      }
+      return escapeHtml(event.source);
+    }
+
+    function getSourceLabel(value) {
+      try {
+        const url = new URL(value);
+        return url.hostname.replace(/^www\./, '');
+      } catch (error) {
+        return value.length > 60 ? `${value.slice(0, 57)}…` : value;
+      }
+    }
+
+    function setupTimelineInteractions() {
+      timelineEl.querySelectorAll('.timeline-event').forEach((eventCol) => {
+        eventCol.addEventListener('click', () => toggleRow(eventCol));
+        eventCol.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleRow(eventCol);
+          }
+        });
+      });
+    }
+
+    function toggleRow(eventCol) {
+      const row = eventCol.closest('.timeline-row');
+      const isActive = row.classList.contains('active');
+      timelineEl.querySelectorAll('.timeline-row.active').forEach((openRow) => openRow.classList.remove('active'));
+      if (!isActive) {
+        row.classList.add('active');
+      }
+    }
+
+    function setupTypeFilterInteractions() {
+      typeFilterList.addEventListener('click', (event) => {
+        const target = event.target.closest('[data-type]');
+        if (target) {
+          updateTypeFilter(target.dataset.type || '');
+        }
+      });
+      typeFilterList.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          const target = event.target.closest('[data-type]');
+          if (target) {
+            event.preventDefault();
+            updateTypeFilter(target.dataset.type || '');
+          }
+        }
+      });
+    }
+
+    function updateTypeFilter(value) {
+      filters.type = value;
+      typeFilterList.querySelectorAll('[data-type]').forEach((item) => {
+        item.classList.toggle('active', (item.dataset.type || '') === value);
+      });
+      applyFilters();
+    }
+
+    function setupSelectFilters() {
+      yearSelect.addEventListener('change', (event) => {
+        filters.year = event.target.value;
+        updateMonthOptionsForYear(filters.year);
+        applyFilters();
+      });
+      monthSelect.addEventListener('change', (event) => {
+        filters.month = event.target.value;
+        applyFilters();
+      });
+    }
+
+    function applyFilters() {
+      errorEl.classList.add('d-none');
+      errorEl.textContent = '';
+      let visibleCount = 0;
+      timelineEl.querySelectorAll('.timeline-row').forEach((row) => {
+        const matches =
+          (!filters.year || row.dataset.year === filters.year) &&
+          (!filters.month || row.dataset.month === filters.month) &&
+          (!filters.type || row.dataset.type === filters.type);
+        row.style.display = matches ? '' : 'none';
+        if (matches) {
+          visibleCount += 1;
+        }
+      });
+      emptyStateEl.classList.toggle('d-none', visibleCount > 0);
+    }
+
+    function showErrorMessage(message) {
+      timelineEl.innerHTML = '';
+      emptyStateEl.classList.add('d-none');
+      errorEl.textContent = message;
+      errorEl.classList.remove('d-none');
+    }
+
+    function truncateText(value, maxLength) {
+      const text = value || '';
+      if (text.length <= maxLength) {
+        return text;
+      }
+      return `${text.slice(0, maxLength - 1)}…`;
+    }
+
+    function escapeHtml(value) {
+      return (value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setupOffcanvas() {
+      const offcanvas = document.getElementById('offcanvasNav');
+      const toggler = document.querySelector('[data-bs-toggle="offcanvas"][data-bs-target="#offcanvasNav"]');
+      if (offcanvas && toggler) {
+        offcanvas.addEventListener('show.bs.offcanvas', () => toggler.classList.add('is-open'));
+        offcanvas.addEventListener('hide.bs.offcanvas', () => toggler.classList.remove('is-open'));
+      }
+    }
+  })();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>

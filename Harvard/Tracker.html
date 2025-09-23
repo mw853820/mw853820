@@ -75,10 +75,12 @@
     /* Rotate chevron on expand */
     .accordion-toggle[aria-expanded="true"] .bi { transform: rotate(180deg); }
 
-    /* Status background colors (collapsed rows) */
-    .status-resolved { background-color: #D1E7E0; }
-    .status-progress { background-color: #F3EED9; }
-    .status-not-taken { background-color: #E19896; }
+    /* Category background colors (collapsed rows) */
+    .status-official { background-color: #D1E7E0; }
+    .status-campus { background-color: #F3EED9; }
+    .status-world { background-color: #E19896; }
+    .status-response { background-color: #E7D8F5; }
+    .status-default { background-color: #E9ECEF; }
 
     /* Expanded row border colors */
     .accordion-body {
@@ -88,9 +90,11 @@
     }
     tr > td[colspan] { padding: 0 !important; }
 
-    .status-resolved + tr .accordion-body { border-color: #D1E7E0; }
-    .status-progress + tr .accordion-body { border-color: #F3EED9; }
-    .status-not-taken + tr .accordion-body { border-color: #E19896; }
+    .status-official + tr .accordion-body { border-color: #D1E7E0; }
+    .status-campus + tr .accordion-body { border-color: #F3EED9; }
+    .status-world + tr .accordion-body { border-color: #E19896; }
+    .status-response + tr .accordion-body { border-color: #E7D8F5; }
+    .status-default + tr .accordion-body { border-color: #E9ECEF; }
   </style>
 </head>
 <body>
@@ -126,14 +130,14 @@
 
   <!-- Tracker -->
   <div class="container my-5">
-    <h2>Recommendations Tracker</h2>
+    <h2>Event Tracker</h2>
     <div class="table-responsive">
       <table class="table" id="accordionData">
         <thead>
           <tr>
             <th scope="col">Date</th>
-            <th scope="col">Recommendation</th>
-            <th scope="col">Status</th>
+            <th scope="col">Event / Info</th>
+            <th scope="col">Category</th>
             <th scope="col" class="text-end">Expand</th>
           </tr>
         </thead>
@@ -152,64 +156,145 @@
     <a href="#" class="text-white mx-2"><i class="bi bi-linkedin"></i></a>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="js/data-utils.js"></script>
   <script>
-    async function loadData() {
-      // Fake test data (replace with fetch)
-      const data = [
-        { date: "April 1, 2023", title: "Recommendation 1", status: "Resolved", organization: "Org A", type: "Type A", description: "Fixed issue", timestamp: "2023-04-01" },
-        { date: "April 2, 2023", title: "Recommendation 2", status: "In Progress", organization: "Org B", type: "Type B", description: "Still working", timestamp: "2023-04-02" },
-        { date: "April 3, 2023", title: "Recommendation 3", status: "Not Taken", organization: "Org C", type: "Type C", description: "Not acted upon", timestamp: "2023-04-03" }
-      ];
+    (function () {
+      const STATUS_CLASS_MAP = {
+        'harvard-official-statement': 'status-official',
+        'harvard-campus-event': 'status-campus',
+        'world-event': 'status-world',
+        'jewish-communal-response': 'status-response'
+      };
+      const DEFAULT_STATUS_CLASS = 'status-default';
 
-      const container = document.querySelector("#accordionData tbody");
-      container.innerHTML = "";
+      const tableBody = document.querySelector('#accordionData tbody');
 
-      data.forEach((row, i) => {
-        let statusClass = "";
-        if (row.status === "Resolved") statusClass = "status-resolved";
-        else if (row.status === "In Progress") statusClass = "status-progress";
-        else if (row.status === "Not Taken") statusClass = "status-not-taken";
+      document.addEventListener('DOMContentLoaded', () => {
+        setupOffcanvas();
+        setupKeyboardSupport();
+        loadTracker();
+      });
 
-        container.innerHTML += `
-          <tr class="accordion-toggle collapsed ${statusClass}"
-              role="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#collapse${i}"
-              aria-expanded="false"
-              aria-controls="collapse${i}">
-            <td>${row.date}</td>
-            <td>${row.title}</td>
-            <td>${row.status}</td>
+      function loadTracker() {
+        renderMessageRow('Loading tracker…');
+        HarvardData.loadEvents()
+          .then((data) => HarvardData.sortEvents(data, 'desc'))
+          .then((events) => {
+            if (!events.length) {
+              renderMessageRow('No records available yet.');
+              return;
+            }
+            renderRows(events);
+          })
+          .catch((error) => {
+            console.error(error);
+            renderMessageRow('Unable to load tracker data right now.');
+          });
+      }
+
+      function renderRows(events) {
+        tableBody.innerHTML = '';
+        events.forEach((event, index) => {
+          const collapseId = `trackerCollapse${index}`;
+          const statusClass = STATUS_CLASS_MAP[event.typeSlug] || DEFAULT_STATUS_CLASS;
+
+          const summaryRow = document.createElement('tr');
+          summaryRow.className = `accordion-toggle collapsed ${statusClass}`;
+          summaryRow.setAttribute('role', 'button');
+          summaryRow.setAttribute('tabindex', '0');
+          summaryRow.setAttribute('data-bs-toggle', 'collapse');
+          summaryRow.setAttribute('data-bs-target', `#${collapseId}`);
+          summaryRow.setAttribute('aria-expanded', 'false');
+          summaryRow.setAttribute('aria-controls', collapseId);
+          summaryRow.innerHTML = `
+            <td>${escapeHtml(event.displayDate)}</td>
+            <td>${escapeHtml(event.title)}</td>
+            <td>${escapeHtml(event.type)}</td>
             <td class="expand-button">
               <span class="toggle-icon"><i class="bi bi-chevron-down"></i></span>
             </td>
-          </tr>
-          <tr>
+          `;
+          tableBody.appendChild(summaryRow);
+
+          const detailRow = document.createElement('tr');
+          detailRow.innerHTML = `
             <td colspan="4">
-              <div id="collapse${i}" class="collapse accordion-body p-3" data-bs-parent="#accordionData">
-                <div class="row"><div class="col-2">Organization</div><div class="col-6">${row.organization}</div></div>
-                <div class="row"><div class="col-2">Type</div><div class="col-6">${row.type}</div></div>
-                <div class="row"><div class="col-2">Description</div><div class="col-6">${row.description}</div></div>
-                <small><em>Submitted: ${row.timestamp}</em></small>
+              <div id="${collapseId}" class="collapse accordion-body p-3" data-bs-parent="#accordionData">
+                <div class="mb-3">
+                  <strong>Summary</strong>
+                  <p class="mb-1">${escapeHtml(event.description)}</p>
+                </div>
+                <div class="row g-2">
+                  <div class="col-sm-3 fw-semibold">Category</div>
+                  <div class="col-sm-9">${escapeHtml(event.type)}</div>
+                </div>
+                <div class="row g-2">
+                  <div class="col-sm-3 fw-semibold">Source</div>
+                  <div class="col-sm-9">${formatSource(event)}</div>
+                </div>
+                <div class="row g-2">
+                  <div class="col-sm-3 fw-semibold">Recorded</div>
+                  <div class="col-sm-9">${escapeHtml(event.displayDate)}</div>
+                </div>
               </div>
             </td>
-          </tr>`;
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      // Load table
-      loadData();
-
-      // Hook the offcanvas events to flip the toggler icon
-      const offcanvas = document.getElementById('offcanvasNav');
-      const toggler = document.querySelector('[data-bs-toggle="offcanvas"][data-bs-target="#offcanvasNav"]');
-
-      if (offcanvas && toggler) {
-        offcanvas.addEventListener('show.bs.offcanvas', () => toggler.classList.add('is-open'));
-        offcanvas.addEventListener('hide.bs.offcanvas', () => toggler.classList.remove('is-open'));
+          `;
+          tableBody.appendChild(detailRow);
+        });
       }
-    });
+
+      function renderMessageRow(message) {
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">${escapeHtml(message)}</td></tr>`;
+      }
+
+      function setupKeyboardSupport() {
+        tableBody.addEventListener('keydown', (event) => {
+          if ((event.key === 'Enter' || event.key === ' ') && event.target.classList.contains('accordion-toggle')) {
+            event.preventDefault();
+            event.target.click();
+          }
+        });
+      }
+
+      function formatSource(event) {
+        if (event.sourceLink) {
+          return `<a href="${event.sourceLink}" target="_blank" rel="noopener">${escapeHtml(getSourceLabel(event.source))}</a>`;
+        }
+        if (event.source) {
+          return escapeHtml(event.source);
+        }
+        return '<span class="text-muted">Not provided</span>';
+      }
+
+      function getSourceLabel(value) {
+        try {
+          const url = new URL(value);
+          return url.hostname.replace(/^www\./, '');
+        } catch (error) {
+          return value.length > 60 ? `${value.slice(0, 57)}…` : value;
+        }
+      }
+
+      function escapeHtml(value) {
+        return (value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function setupOffcanvas() {
+        const offcanvas = document.getElementById('offcanvasNav');
+        const toggler = document.querySelector('[data-bs-toggle="offcanvas"][data-bs-target="#offcanvasNav"]');
+
+        if (offcanvas && toggler) {
+          offcanvas.addEventListener('show.bs.offcanvas', () => toggler.classList.add('is-open'));
+          offcanvas.addEventListener('hide.bs.offcanvas', () => toggler.classList.remove('is-open'));
+        }
+      }
+    })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
